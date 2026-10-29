@@ -1,0 +1,9 @@
+# Output of exercise.sh on LocalStack 2026.10.4:a39e30ef, 2026-10-29
+--- publish 2 messages to the topic
+published 'small order (25)' -> 8baf38ca-a044-454f-8243-5ff7f1bfc631
+published 'big order (250)' -> dd4fea35-687c-42e8-a831-8517e1c1dcca
+--- all-orders queue (no filter): gets both
+small order (25)
+big order (250)
+--- big-orders queue (filter amount >= 100): gets only the big one
+big order (250)
