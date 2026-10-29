@@ -1,0 +1,10 @@
+# Output of exercise.sh on LocalStack 2026.10.4:a39e30ef, 2026-10-29
+API: http://ef65dcf5.execute-api.localhost.localstack.cloud:4566
+--- GET /hello
+{"message": "hello world", "path": "/hello"}
+--- GET /hello?name=Asha
+{"message": "hello Asha", "path": "/hello"}
+--- POST /items
+{"created": {"sku": "A-1", "qty": 2}}  (HTTP 201)
+--- a route that doesn't exist
+{"message":"Not Found"}  (HTTP 404)

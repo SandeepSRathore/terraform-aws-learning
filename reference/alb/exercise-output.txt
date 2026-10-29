@@ -1,0 +1,12 @@
+# Output of exercise.sh on LocalStack 2026.10.4:a39e30ef, 2026-10-29
+ALB: http://demo-alb.elb.localhost.localstack.cloud:4566
+--- GET /health
+{"status":"ok"}  (HTTP 200)
+--- GET /anything-else
+default: no rule matched  (HTTP 404)
+--- target group health (empty: no targets registered yet)
+registered targets: 0
+--- rules in priority order
+10	/health	fixed-response
+20	/api/*	forward
+default	-	fixed-response
