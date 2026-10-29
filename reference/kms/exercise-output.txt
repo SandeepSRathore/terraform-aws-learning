@@ -1,0 +1,12 @@
+# Output of exercise.sh on LocalStack 2026.10.4:a39e30ef, 2026-10-29
+--- 1. encrypt a small secret directly with KMS (max 4 KB)
+ciphertext (base64, first 40 chars): NGI4OWI4Y2YtYzJkYi00ZTYyLWE2YjgtZTZiNjZh...
+--- decrypt: no key ID needed, the ciphertext records which key was used
+card=4111-1111
+--- 2. envelope encryption for big data
+encrypted 8893 bytes locally; stored key is encrypted
+--- later: ask KMS to decrypt the data key, then decrypt the data locally
+1999
+2000
+--- key rotation status
+True

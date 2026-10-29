@@ -1,0 +1,13 @@
+# Output of exercise.sh on LocalStack 2026.10.4:a39e30ef, 2026-10-29
+--- admin creates a user (SUPPRESS = don't send the welcome email)
+FORCE_CHANGE_PASSWORD
+password set (status CONFIRMED)
+--- the user logs in and gets 3 tokens
+got: AccessToken, RefreshToken, IdToken | expires in 3600 s
+--- inside the id token (a JWT: header.payload.signature, payload is base64 JSON)
+  email: asha@example.com
+  custom:plan: pro
+  token_use: id
+  iss: http://localhost.localstack.cloud:4566/us-east-1_0f7d9206628f4901997be7e3058c239d
+--- wrong password
+NotAuthorizedException) when calling the InitiateAuth operation: Incorrect username or password

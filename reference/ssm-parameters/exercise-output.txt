@@ -1,0 +1,13 @@
+# Output of exercise.sh on LocalStack 2026.10.4:a39e30ef, 2026-10-29
+--- one parameter
+info
+--- SecureString without --with-decryption: you get ciphertext
+kms:alias/aws/ssm:sk-demo-not-a-real-key
+--- the whole path at once, decrypted (what an app does at startup)
+/app/dev/log_level	String	info
+/app/dev/api_key	SecureString	sk-demo-not-a-real-key
+/app/dev/allowed_origins	StringList	https://example.com,https://admin.example.com
+--- change a value: every change creates a new version
+new version: 2
+1	info
+2	debug

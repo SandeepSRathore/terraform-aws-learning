@@ -1,0 +1,10 @@
+# Output of exercise.sh on LocalStack 2026.10.4:a39e30ef, 2026-10-29
+--- policy simulator: is alice allowed? (via her group's policy)
+s3:GetObject	allowed
+s3:DeleteObject	implicitDeny
+--- who am I, using alice's own access keys?
+arn:aws:iam::000000000000:user/alice
+--- alice assumes the deployer role and gets TEMPORARY credentials
+temp key: LSIAQAAA... | expires: 2026-10-29T11:12:24.418840+00:00
+--- who am I now?
+arn:aws:sts::000000000000:assumed-role/deployer/alice-deploy
