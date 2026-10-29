@@ -1,0 +1,13 @@
+# Output of exercise.sh on LocalStack 2026.10.4:a39e30ef, 2026-10-29
+--- replication group
+available	cache.t4g.micro	localhost.localstack.cloud	4510
+--- cache a value for 60 seconds (the cache-aside pattern's 'set')
+OK
+{"name":"Asha"}
+seconds left: 59
+--- atomic counter (rate limiting, page views)
+views: 3
+--- leaderboard with a sorted set
+  meera	150
+  asha	120
+  ravi	95

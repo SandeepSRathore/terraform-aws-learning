@@ -17,6 +17,8 @@ terraform-iac/
 ├── environments/
 │   └── dev/                 ROOT module: wires the modules together, with on/off toggles
 │       └── functions/       Lambda source code (upload_processor/handler.py)
+├── reference/               ONE EXAMPLE PER AWS SERVICE (20), verified on LocalStack
+│                            -> see reference/README.md for the list and how to use them
 └── scripts/test-all.sh      runs fmt, validate and tests everywhere
 ```
 
@@ -260,6 +262,7 @@ runtime image (a few hundred MB). On real AWS, Lambda's free tier covers 1 milli
 | `mounts denied ... Library/Caches/lstk` | Add the folder to Docker Desktop file sharing (step 1) |
 | `Docker Desktop VM stopped unexpectedly: ... The storage device attachment is invalid` after changing Docker settings | Docker's automatic restart started the new VM before the old one released its disk file (`Docker.raw`). Quit Docker Desktop fully, then start it again (`open -a Docker`). |
 | `Error: login requires an interactive terminal` | Run `lstk` once in your own terminal to log in |
+| Each project folder's `.terraform/` is ~700 MB | No shared plugin cache. Add `plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"` to `~/.terraformrc`, delete the `.terraform/` folders, and run `terraform init` again |
 | `lstk` warns "AWS profile is incomplete" | Optional: `lstk setup aws` creates an AWS CLI profile for LocalStack |
 | A service fails to create | Your LocalStack plan may not include it; switch that `enable_*` toggle off |
 | Upload succeeds but no report appears in `processed/` | Check the function's log (section 6): a Python error shows up there. Also check the file went to `uploads/` exactly (prefixes are case-sensitive). |
