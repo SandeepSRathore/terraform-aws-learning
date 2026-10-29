@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars (git-ignored) and edit:
+#   cp terraform.tfvars.example terraform.tfvars
+
+use_localstack = true # false = real AWS (needs an account)
+
+aws_region = "us-east-1"
+project    = "tf-learning"
+
+enable_s3         = true
+enable_ec2        = true
+enable_elastic_ip = false
+enable_ebs        = false
+enable_ecs        = false
+enable_beanstalk  = false
+enable_lambda     = false
+
+# ssh_cidr = "203.0.113.10/32"   # your IP: curl https://checkip.amazonaws.com
+# key_name = "my-keypair"         # an EC2 key pair you created in the console

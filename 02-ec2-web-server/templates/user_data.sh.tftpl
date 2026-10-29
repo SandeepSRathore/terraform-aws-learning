@@ -1,0 +1,29 @@
+#!/bin/bash
+# Runs as root on the instance's first boot.
+# Log output: /var/log/cloud-init-output.log
+set -euxo pipefail
+
+dnf install -y nginx
+
+# Ask the metadata service (IMDSv2) which instance and AZ we are
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
+INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/instance-id)
+AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+cat > /usr/share/nginx/html/index.html <<EOF
+<!doctype html>
+<html>
+  <head><title>${name}</title></head>
+  <body style="font-family: sans-serif; margin: 3rem;">
+    <h1>${message}</h1>
+    <p>Instance: <b>$INSTANCE_ID</b></p>
+    <p>Availability zone: <b>$AZ</b></p>
+    <p>Built by Terraform, lesson 02.</p>
+  </body>
+</html>
+EOF
+
+systemctl enable --now nginx
