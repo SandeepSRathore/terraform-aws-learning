@@ -1,0 +1,22 @@
+# ---- 60: wait until the app answers ----
+# `terraform apply` finishes as soon as EC2 says "running", long before Java
+# has started. This step records in the log whether the app really came up;
+# scripts/springboot/smoke-test.sh checks the same URL from outside.
+HEALTH_URL="http://localhost:${app_port}${health_check_path}"
+step "Wait up to ${health_check_timeout}s for $HEALTH_URL"
+
+healthy=false
+for i in $(seq 1 ${health_check_timeout}); do
+  if curl -fsS -o /dev/null "$HEALTH_URL" 2>/dev/null; then
+    healthy=true
+    break
+  fi
+  sleep 1
+done
+
+if [ "$healthy" != true ]; then
+  echo "ERROR: $APP_NAME was not healthy after ${health_check_timeout}s" >&2
+  exit 1
+fi
+# No `exit 0` here: any later numbered step must still run.
+echo "$APP_NAME is healthy after $${i}s: $(curl -fsS "$HEALTH_URL")"

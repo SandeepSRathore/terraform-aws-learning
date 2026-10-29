@@ -1,0 +1,40 @@
+# springboot-ec2 on LocalStack 2026.10.4 (Pro, Docker-backed EC2), 2026-10-29
+# Deployed with: scripts/springboot/deploy.sh --localstack --yes -- -var enable_ec2=false -var enable_s3=false
+# Instance i-be718638688973f01, AMI ami-024f768332f0 (LocalStack's Amazon Linux 2023 image)
+
+## 1. Bootstrap log on the instance (/var/log/hello-springboot-bootstrap.log, dnf package lines removed)
+==> [19:05:22] Bootstrapping hello-springboot
+==> [19:05:22] Install Java 21 (Amazon Corretto)
+openjdk version "21.0.11" 2026-04-21 LTS
+OpenJDK Runtime Environment Corretto-21.0.11.10.1 (build 21.0.11+10-LTS)
+OpenJDK 64-Bit Server VM Corretto-21.0.11.10.1 (build 21.0.11+10-LTS, mixed mode, sharing)
+==> [19:06:34] Create user hello-springboot and folders
+==> [19:06:34] Download s3://tf-learning-artifacts-be23f5fe61b844500b2e66dae1/artifacts/hello-springboot/hello-springboot.jar
+==> [19:06:35] Verify SHA-256 checksum
+/opt/hello-springboot/app.jar.download: OK
+==> [19:06:35] Write /etc/hello-springboot/app.env
+==> [19:06:35] Start hello-springboot
+systemd is not running: starting hello-springboot as a background process
+==> [19:06:35] Wait up to 180s for http://localhost:8080/actuator/health
+hello-springboot is healthy after 3s: {"groups":["liveness","readiness"],"status":"UP"}
+
+## 2. What runs, as whom
+uid 997 (hello-springboot): /usr/bin/java -Xms256m -Xmx512m -jar /opt/hello-springboot/app.jar 
+-rw-r----- 1 root             hello-springboot       94 Oct 29 19:06 /etc/hello-springboot/app.env
+-r--r----- 1 hello-springboot hello-springboot 22043167 Oct 29 19:05 /opt/hello-springboot/app.jar
+
+## 3. scripts/springboot/smoke-test.sh --localstack
+==> Wait up to 300s for http://172.17.0.4:8080/actuator/health
+healthy after 0s: {"groups":["liveness","readiness"],"status":"UP"}
+==> GET http://172.17.0.4:8080/
+{"host":"c57b2c1daf31","java":"21.0.11","message":"Hello from Spring Boot on EC2!","version":"0.0.1-SNAPSHOT"}
+
+## 4. Second deploy with no code changes (reproducible JAR -> nothing to do)
+SHA-256: 06113dd6c26f3cfa195a5694254b58d82e427c5258df00feab5794626c5b51ab
+No changes. Your infrastructure matches the configuration.
+Apply complete! Resources: 0 added, 0 changed, 0 destroyed.
+
+## Not verified by LocalStack (needs real AWS)
+- The IAM role's s3:GetObject permission: LocalStack's metadata service has no credential endpoint, so the script uses dummy keys there.
+- systemd: LocalStack instances are containers without an init system, so step 50 used its background-process fallback.
+- Reaching the app from the internet: the security group isn't enforced, and the Mac can't route to container IPs.

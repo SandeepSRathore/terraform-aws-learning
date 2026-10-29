@@ -1,0 +1,11 @@
+# ---- 10: Java and the tools the later steps need ----
+step "Install Java ${java_version} (Amazon Corretto)"
+
+PKGS="java-${java_version}-amazon-corretto-headless"
+# The real Amazon Linux 2023 AMI already has these; slimmer images may not.
+command -v aws     >/dev/null || PKGS="$PKGS awscli-2"
+command -v useradd >/dev/null || PKGS="$PKGS shadow-utils"
+command -v runuser >/dev/null || PKGS="$PKGS util-linux"
+
+dnf install -y -q $PKGS
+java -version

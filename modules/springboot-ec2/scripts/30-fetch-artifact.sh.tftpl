@@ -1,0 +1,20 @@
+# ---- 30: download the JAR from S3 and check it is the exact build Terraform uploaded ----
+# Credentials: the AWS CLI gets them from the instance's IAM role via the
+# metadata service. No access keys are stored on the server.
+step "Download ${artifact_s3_uri}"
+%{ if aws_endpoint_url != "" ~}
+# LocalStack only. Its metadata service has no IAM credential endpoint, so
+# the instance role can't supply credentials; LocalStack accepts any keys.
+# (This also means LocalStack does NOT test the role's S3 permission.)
+export AWS_ENDPOINT_URL="${aws_endpoint_url}"
+export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test
+%{ endif ~}
+
+aws s3 cp "${artifact_s3_uri}" "$JAR.download" --region "${aws_region}" --only-show-errors
+
+step "Verify SHA-256 checksum"
+echo "${artifact_sha256}  $JAR.download" | sha256sum --check --strict
+
+mv "$JAR.download" "$JAR"
+chown "$APP_USER:$APP_USER" "$JAR"
+chmod 0440 "$JAR"

@@ -43,6 +43,19 @@ run "uses_given_ami" {
   }
 }
 
+run "attaches_instance_profile" {
+  command = plan
+
+  variables {
+    iam_instance_profile = "test-web-profile"
+  }
+
+  assert {
+    condition     = aws_instance.this.iam_instance_profile == "test-web-profile"
+    error_message = "The instance should get the IAM role through its instance profile"
+  }
+}
+
 # `command = apply` against the mock "creates" the instance with fake
 # values, so we can check outputs that only exist after creation.
 run "outputs_after_apply" {

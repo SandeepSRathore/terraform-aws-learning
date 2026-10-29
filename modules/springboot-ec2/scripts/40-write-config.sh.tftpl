@@ -1,0 +1,15 @@
+# ---- 40: configuration as environment variables ----
+# Spring Boot maps env vars onto properties: SERVER_PORT -> server.port,
+# APP_MESSAGE -> app.message, SPRING_PROFILES_ACTIVE -> the active profile.
+step "Write $CONF_DIR/app.env"
+
+cat > "$CONF_DIR/app.env" <<'EOF'
+SERVER_PORT="${app_port}"
+JAVA_OPTS="${jvm_opts}"
+%{ for key, value in app_env ~}
+${key}="${value}"
+%{ endfor ~}
+EOF
+
+chown root:"$APP_USER" "$CONF_DIR/app.env"
+chmod 0640 "$CONF_DIR/app.env"

@@ -1,0 +1,22 @@
+#!/bin/bash
+# Bootstrap for ${app_name}, assembled by Terraform from
+# modules/springboot-ec2/scripts/*.sh.tftpl (one file per step, in name order).
+# Runs once, as root, on the instance's first boot.
+#
+# Logs: /var/log/${app_name}-bootstrap.log (and /var/log/cloud-init-output.log on EC2)
+#
+# Template syntax: $${...} is filled in by Terraform before upload;
+# plain $VAR is a normal shell variable, expanded on the instance.
+set -euo pipefail
+exec > >(tee -a /var/log/${app_name}-bootstrap.log) 2>&1
+
+APP_NAME="${app_name}"
+APP_USER="${app_name}"
+APP_DIR="/opt/${app_name}"
+CONF_DIR="/etc/${app_name}"
+JAR="$APP_DIR/app.jar"
+
+step() { echo; echo "==> [$(date -u +%H:%M:%S)] $*"; }
+trap 'echo "BOOTSTRAP FAILED at line $LINENO" >&2' ERR
+
+step "Bootstrapping $APP_NAME"

@@ -38,6 +38,12 @@ variable "user_data" {
   default     = null
 }
 
+variable "iam_instance_profile" {
+  description = "Instance profile NAME giving the instance an IAM role (e.g. to read S3). null = no role."
+  type        = string
+  default     = null
+}
+
 variable "associate_public_ip" {
   description = "Give the instance a public IP so it is reachable from the internet"
   type        = bool

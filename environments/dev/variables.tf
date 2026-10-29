@@ -87,3 +87,23 @@ variable "web_message" {
   type        = string
   default     = "Hello from Terraform modules!"
 }
+
+# ---- Spring Boot on EC2 ----
+
+variable "enable_springboot" {
+  description = "Deploy the Spring Boot JAR from apps/hello-springboot to its own EC2 instance"
+  type        = bool
+  default     = false
+}
+
+variable "springboot_jar_path" {
+  description = "JAR to deploy. null = apps/hello-springboot/target/hello-springboot.jar"
+  type        = string
+  default     = null
+}
+
+variable "springboot_message" {
+  description = "Passed to the app as APP_MESSAGE; shown by GET /"
+  type        = string
+  default     = "Hello from Spring Boot on EC2!"
+}

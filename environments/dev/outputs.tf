@@ -39,3 +39,19 @@ output "upload_processor_logs" {
 output "beanstalk_url" {
   value = one(module.beanstalk[*].url)
 }
+
+output "springboot_url" {
+  value = one(module.springboot_app[*].app_url)
+}
+
+output "springboot_health_url" {
+  value = one(module.springboot_app[*].health_url)
+}
+
+output "springboot_instance_id" {
+  value = one(module.springboot_app[*].instance_id)
+}
+
+output "springboot_artifact" {
+  value = one(module.springboot_app[*].artifact_s3_uri)
+}

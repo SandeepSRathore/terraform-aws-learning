@@ -1,0 +1,36 @@
+# ---- 50: run the JAR as a service ----
+step "Start $APP_NAME"
+
+if [ -d /run/systemd/system ]; then
+  # Real EC2: systemd starts the app on boot and restarts it if it crashes.
+  cat > "/etc/systemd/system/$APP_NAME.service" <<EOF
+[Unit]
+Description=$APP_NAME (Spring Boot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=$APP_USER
+EnvironmentFile=$CONF_DIR/app.env
+ExecStart=/usr/bin/java \$JAVA_OPTS -jar $JAR
+# The JVM exits with 143 when systemd stops it with SIGTERM: that's a clean stop.
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  systemctl enable --now "$APP_NAME"
+else
+  # No init system. This happens in LocalStack, whose "EC2 instances" are
+  # Docker containers. Start the same command as a detached background
+  # process so the rest of the script can be tested unchanged. Nothing will
+  # restart it if it crashes, so on real EC2 always use the systemd branch.
+  echo "systemd is not running: starting $APP_NAME as a background process"
+  install -o "$APP_USER" -g "$APP_USER" -m 0640 /dev/null "/var/log/$APP_NAME.log"
+  setsid runuser -u "$APP_USER" -- bash -c \
+    'set -a; . "$0"; exec /usr/bin/java $JAVA_OPTS -jar "$1"' "$CONF_DIR/app.env" "$JAR" \
+    >> "/var/log/$APP_NAME.log" 2>&1 < /dev/null &
+fi

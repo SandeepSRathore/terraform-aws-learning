@@ -13,13 +13,20 @@ terraform-iac/
 │   ├── ebs-volume/          extra disk, optionally attached to an instance
 │   ├── ecs-fargate/         container cluster, task definition, service, logs
 │   ├── elastic-beanstalk/   app + environment + the two IAM roles it needs
-│   └── lambda-function/     zipped Python code + IAM role + log group, runs on demand
+│   ├── lambda-function/     zipped Python code + IAM role + log group, runs on demand
+│   ├── ec2-instance-profile/ IAM role for EC2 (no access keys on the server) + optional SSM
+│   └── springboot-ec2/      Spring Boot JAR on EC2: S3 upload + role + firewall + instance,
+│       └── scripts/         the boot script, one numbered file per step (00- ... 60-)
+├── apps/
+│   └── hello-springboot/    sample Spring Boot 4.1 app (Java 21, Maven)
 ├── environments/
 │   └── dev/                 ROOT module: wires the modules together, with on/off toggles
 │       └── functions/       Lambda source code (upload_processor/handler.py)
 ├── reference/               ONE EXAMPLE PER AWS SERVICE (20), verified on LocalStack
 │                            -> see reference/README.md for the list and how to use them
-└── scripts/test-all.sh      runs fmt, validate and tests everywhere
+└── scripts/
+    ├── test-all.sh          runs fmt, validate and tests everywhere
+    └── springboot/          build.sh, deploy.sh, smoke-test.sh, logs.sh (+ shared lib.sh)
 ```
 
 Every module has the same shape:
@@ -254,6 +261,77 @@ such as `other/x.txt`, doesn't trigger the function.
 On LocalStack, the first `apply` takes about a minute because it downloads the Python
 runtime image (a few hundred MB). On real AWS, Lambda's free tier covers 1 million runs a month.
 
+### 7. Deploy a Spring Boot JAR to EC2
+
+`modules/springboot-ec2` runs any Spring Boot fat JAR on one EC2 instance. It
+is built from other modules plus two pieces of its own:
+
+```
+build.sh                    terraform apply                                 smoke-test.sh
+mvn package ──▶ app.jar ──▶ aws_s3_object (artifacts bucket)                curl /actuator/health
+                            ec2-instance-profile: may read THIS object only        ▲
+                            security-group: app port 8080 (+ SSH if ssh_cidr)       │
+                            ec2-instance + user_data ──▶ boots and runs scripts/ ───┘
+```
+
+The boot script (`user_data`) is assembled from `modules/springboot-ec2/scripts/`,
+one file per step, joined in file-name order:
+
+| File | Does |
+|------|------|
+| `00-header` | strict mode (`set -euo pipefail`), logging to `/var/log/<app>-bootstrap.log`, shared variables |
+| `10-install-packages` | Amazon Corretto (`java_version`, default 21) and any missing tools |
+| `20-create-user` | an unprivileged `hello-springboot` user: the app never runs as root |
+| `30-fetch-artifact` | `aws s3 cp` with the instance role, then **verify the SHA-256** Terraform recorded |
+| `40-write-config` | `/etc/<app>/app.env`: `SERVER_PORT`, `JAVA_OPTS`, everything in `app_env` |
+| `50-start-service` | a systemd unit (restart on failure, start on boot) |
+| `60-health-check` | wait for `/actuator/health`, and log whether the app came up |
+
+To add a step, drop in a new numbered file such as `55-install-agent.sh.tftpl`.
+Every file gets the same template variables.
+
+**Deploy, on LocalStack or AWS:**
+
+```bash
+./scripts/springboot/deploy.sh --localstack        # build + apply (asks first) + smoke test
+./scripts/springboot/deploy.sh --localstack --yes -- -var enable_ec2=false -var enable_s3=false
+./scripts/springboot/smoke-test.sh --localstack    # just check the running app
+./scripts/springboot/logs.sh --localstack          # what the boot script did
+```
+
+Drop `--localstack` to deploy to real AWS. Arguments after `--` go to `terraform apply`.
+
+**How a new version gets deployed.** The JAR's SHA-256 is part of `user_data`.
+A new JAR gives new `user_data`, and the plan says `user_data # forces replacement`,
+so the old instance is destroyed and a new one boots with the new JAR. This is an
+*immutable* deploy: servers are replaced, never patched. Two consequences:
+
+- There's a minute or two of downtime, and the public IP changes. In production,
+  put an ALB in front (see `reference/alb`), or use an Auto Scaling group with
+  instance refresh.
+- The build must be **reproducible**, otherwise rebuilding unchanged code would
+  also replace the server. `pom.xml` sets `project.build.outputTimestamp` for this.
+  Without it, two builds of the same code had different checksums (`941b…` and `94c0…`).
+
+**What LocalStack proved** (output saved in
+`modules/springboot-ec2/localstack-verification.txt`): every boot step ran on an
+Amazon Linux 2023 instance, the downloaded JAR's checksum matched, Java 21 runs
+as the unprivileged user, the app answered over the network, and a second deploy
+with no changes reported `No changes`.
+
+**What it couldn't prove.** LocalStack's EC2 instances are Docker containers, so:
+
+| Gap | Effect here | On real AWS |
+|-----|-------------|-------------|
+| No IAM credentials in the metadata service | `30-fetch-artifact` uses dummy keys when `aws_endpoint_url` is set | The instance role is used, and `s3:GetObject` on that one object must be allowed |
+| No systemd | `50-start-service` falls back to a background process | systemd runs and restarts the app |
+| Container IPs aren't routable from the Mac | `smoke-test.sh --localstack` sends its requests from inside the LocalStack container | `curl http://<public ip>:8080` from anywhere in `allowed_cidrs` |
+
+**Never put secrets in `app_env`.** It ends up in `user_data`, which anyone with
+`ec2:DescribeInstanceAttribute` can read. Have the app read secrets at startup
+from Secrets Manager or SSM Parameter Store (see `reference/secrets-manager` and
+`reference/ssm-parameters`) and give the instance role permission for them.
+
 ### Troubleshooting
 
 | Symptom | Cause / fix |
@@ -276,7 +354,7 @@ is more lenient:
 |---|---|---|
 | Unsigned `curl` to S3 | Works | **403**: requests must be signed (AWS CLI/SDK), and the bucket blocks public access |
 | Credentials and permissions | Anything works; permissions aren't checked | Real keys, and every action needs permission |
-| EC2 instance | A record only; `web_url` doesn't respond | A real VM boots, runs `user_data` and serves the page |
+| EC2 instance | With LocalStack's Amazon Linux AMI (`ami-024f768332f0`), a Docker container that runs `user_data`, but has no systemd and no instance-role credentials (section 7) | A real VM boots, runs `user_data` and serves the page |
 | Speed | Seconds | EC2 takes about a minute, ECS a few minutes, Beanstalk 5–10 minutes |
 | New IAM roles | Usable instantly | Can take seconds to become usable, so a first apply may fail; retry |
 | Validation and quotas | Often lenient | Strict (instance types per AZ, quotas, unique bucket names) |

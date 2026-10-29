@@ -143,6 +143,49 @@ run "lambda_needs_s3" {
   }
 }
 
+run "springboot_off_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(module.springboot_app) == 0 && length(module.artifacts_bucket) == 0
+    error_message = "The Spring Boot app should only deploy when enabled"
+  }
+}
+
+run "springboot_on_real_aws" {
+  command = apply # the bucket name (random suffix) is only known after apply
+
+  variables {
+    enable_springboot   = true
+    springboot_jar_path = "../../modules/springboot-ec2/tests/fixtures/app-v1.jar"
+  }
+
+  assert {
+    condition     = output.springboot_artifact == "s3://${module.artifacts_bucket[0].bucket_name}/artifacts/hello-springboot/app-v1.jar"
+    error_message = "The JAR should go to the dedicated artifacts bucket"
+  }
+
+  assert {
+    condition     = !strcontains(module.springboot_app[0].bootstrap_script, "AWS_ENDPOINT_URL")
+    error_message = "Against real AWS the instance must use real S3"
+  }
+}
+
+run "springboot_on_localstack" {
+  command = apply # the bucket name (random suffix) is only known after apply
+
+  variables {
+    enable_springboot   = true
+    springboot_jar_path = "../../modules/springboot-ec2/tests/fixtures/app-v1.jar"
+    use_localstack      = true
+  }
+
+  assert {
+    condition     = strcontains(module.springboot_app[0].bootstrap_script, "export AWS_ENDPOINT_URL=\"http://localhost.localstack.cloud:4566\"")
+    error_message = "On LocalStack the instance must send S3 calls back to LocalStack"
+  }
+}
+
 run "everything_off" {
   command = plan
 
